@@ -53,7 +53,7 @@ async def command_start_handler(message: Message) -> None:
 async def start_process_book(message: Message):
     """
     """
-    keyboard = [start_process_yes_button, start_process_no_button]
+    keyboard = [[start_process_yes_button, start_process_no_button]]
     keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await message.reply(
         'Хотите обработать pdf книгу?',
@@ -68,10 +68,10 @@ async def accept_button(message: Message, state: FSMContext):
 
 
 @dp.message(F.text.casefold() == continue_process_button.text.casefold())
-@dp.message(state=FormVerify.get_file)
+@dp.message(FormVerify.get_file)
 async def file_recieved(message: Message, state: FSMContext):
     # документ получен
-    keyboard = [separate_file_button, rotate_button]
+    keyboard = [[separate_file_button, rotate_button]]
     keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await message.reply(
         'Как хотите обработать файл?',
@@ -82,7 +82,7 @@ async def file_recieved(message: Message, state: FSMContext):
 @dp.message()
 @dp.message(F.text.casefold() == separate_file_button.text.casefold())
 async def separate_file(message: Message, state: FSMContext):
-    keyboard = [vertical_button, horizontal_button]
+    keyboard = [[vertical_button, horizontal_button]]
     keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await FormVerify.separate_file_orientation.set()
     await message.reply(
@@ -93,7 +93,7 @@ async def separate_file(message: Message, state: FSMContext):
 
 @dp.message(F.text.casefold() == horizontal_button.text.casefold())
 async def separate_file_stringly(message: Message, state: FSMContext):
-    keyboard = [separate_strongly_button, separate_with_reserve_button]
+    keyboard = [[separate_strongly_button, separate_with_reserve_button]]
     keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await FormVerify.separate_file_strongly.set()
     await message.reply(
@@ -105,7 +105,7 @@ async def separate_file_stringly(message: Message, state: FSMContext):
 @dp.message(F.text.casefold() == separate_strongly_button.text.casefold())
 async def process_separation_pages_file(message: Message, state: FSMContext):
     # TODO: обработка файла
-    keyboard = [continue_process_button, complete_process_button]
+    keyboard = [[continue_process_button, complete_process_button]]
     keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await message.reply(
         'Файл обработан. Хотите его обработать как то еще?',
@@ -116,7 +116,7 @@ async def process_separation_pages_file(message: Message, state: FSMContext):
 @dp.message(F.text.casefold() == complete_process_button.text.casefold())
 async def complete_process(message: Message, state: FSMContext):
     # TODO: отправить файл
-    keyboard = [continue_process_button, complete_process_button]
+    keyboard = [[continue_process_button, complete_process_button]]
     keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await message.reply(
         'Готово!',
