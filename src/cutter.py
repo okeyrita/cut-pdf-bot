@@ -4,6 +4,7 @@ from pypdf import PdfReader, PdfWriter
 
 
 def crop_page_to_separate_strongly(page):
+    # horizontal
     mb = page.mediabox
     upper_page = deepcopy(page)
     down_page = deepcopy(page)
