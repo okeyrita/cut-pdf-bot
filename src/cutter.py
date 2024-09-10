@@ -1,4 +1,5 @@
 from copy import deepcopy
+import io
 
 from pypdf import PdfReader, PdfWriter
 
@@ -57,6 +58,14 @@ def save_pdf(writer):
     with open('pypdf-output.pdf', 'wb') as fp:
         writer.write(fp)
 
+
+def separate_pdf_tg_bot(pdf_file: io.BytesIO):
+    reader = PdfReader(pdf_file)
+    writer = process_pdf(reader)
+    myio = io.BytesIO()
+    with open(fileobj=myio, mode='wb') as g:
+        writer.write(g)
+    return myio
 
 def main():
     reader = PdfReader('Asyncio.pdf')

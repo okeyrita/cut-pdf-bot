@@ -21,11 +21,6 @@ bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
 
-class SeparateDocument(StatesGroup):
-    separate_page_orientation = State()
-    separate_page_strongly = State()
-
-
 class FormDocument(StatesGroup):
     separate_file_orientation = State()
     separate_file_strongly = State()
@@ -36,11 +31,11 @@ continue_process_button = KeyboardButton(text="Продолжить обрабо
 start_process_no_button = KeyboardButton(text="Нет")
 complete_process_button = KeyboardButton(text="Завершить обработку")
 
-separate_pages_button = KeyboardButton(text="Разделить страницы книги")
+separate_file_button = KeyboardButton(text="Разделить страницы книги")
 rotate_button = KeyboardButton(text="Повернуть страницы книги")
 
-separate_vertical_button = KeyboardButton(text="горизонтально")
-separate_horizontal_button = KeyboardButton(text="Вертикально")
+vertical_button = KeyboardButton(text="горизонтально")
+horizontal_button = KeyboardButton(text="Вертикально")
 
 separate_strongly_button = KeyboardButton(text="строго")
 separate_with_reserve_button = KeyboardButton(text="с запасом")
@@ -67,19 +62,37 @@ async def start_process_book(message: Message):
 
 
 @dp.message(F.text.casefold() == start_process_yes_button.text.casefold())
-async def accept_button(message: Message):
-    keyboard = [[separate_pages_button, rotate_button]]
-    keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
-    await message.answer(
-        "Как хотите обработать файл?",
-        reply_markup=keyboard
-    )
+async def accept_button(message: Message, state: FSMContext):
+    await state.set_state(FormDocument.get_file)
+    await message.answer("Отправьте файл для обработки")
 
 
-@dp.message(F.text.casefold() == separate_pages_button.text.casefold())
-async def separate_pages_file(message: Message, state: FSMContext):
-    await state.set_state(SeparateDocument.separate_page_orientation)
-    keyboard = [[separate_vertical_button, separate_horizontal_button]]
+#@dp.message(F.text.casefold() == continue_process_button.text.casefold())
+@dp.message(FormDocument.get_file)
+async def file_recieved(message: Message, state: FSMContext):
+
+
+    '''
+    message.document
+    print(type(FormDocument.get_file))
+    with io.BytesIO() as file_in_io:
+        await FormDocument.get_file.download(destination_file=file_in_io)
+        file_in_io.seek(0)
+    new = separate_pdf_tg_bot(FormDocument.get_file)
+    await message.reply_document(new)
+    '''
+    # документ получен
+    #keyboard = [[separate_file_button, rotate_button]]
+    #keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
+    #await message.answer(
+    #    'Как хотите обработать файл?',
+    #    reply_markup=keyboard
+    #)
+
+
+@dp.message(F.text.casefold() == separate_file_button.text.casefold())
+async def separate_file(message: Message, state: FSMContext):
+    keyboard = [[vertical_button, horizontal_button]]
     keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await message.answer(
         'Хотите разделить страницы вертикально или горизонтально?',
@@ -87,10 +100,8 @@ async def separate_pages_file(message: Message, state: FSMContext):
     )
 
 
-@dp.message(SeparateDocument.separate_page_orientation, F.text.casefold() == separate_vertical_button.text.casefold())
-@dp.message(SeparateDocument.separate_page_orientation, F.text.casefold() == separate_horizontal_button.text.casefold())
-async def separate_file_strongly(message: Message, state: FSMContext):
-    await state.set_state(SeparateDocument.separate_page_strongly)
+@dp.message(F.text.casefold() == horizontal_button.text.casefold())
+async def separate_file_stringly(message: Message, state: FSMContext):
     keyboard = [[separate_strongly_button, separate_with_reserve_button]]
     keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await message.answer(
@@ -99,24 +110,37 @@ async def separate_file_strongly(message: Message, state: FSMContext):
     )
 
 
-@dp.message(SeparateDocument.separate_page_strongly, F.text.casefold() == separate_strongly_button.text.casefold())
-async def separate_pages_strongly(message: Message, state: FSMContext):
+@dp.message(F.text.casefold() == separate_strongly_button.text.casefold())
+async def process_separation_pages_file(message: Message, state: FSMContext):
+    # TODO: обработка файла
+    async with io.BytesIO() as file_in_io:
+        await message.photo[-1].download(destination_file=file_in_io)
+        file_in_io.seek(0)
+    new = separate_pdf_tg_bot(file_in_io)
+    await message.reply_document(new)
+
+    keyboard = [[continue_process_button, complete_process_button]]
+    keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await message.answer(
-        'Отправьте документ'
+        'Файл обработан. Хотите его обработать как то еще?',
+        reply_markup=keyboard
     )
 
 
-@dp.message(F.document)
-async def process_file(message: Message, state: FSMContext):
-    # get document
-    # process document
+@dp.message(F.text.casefold() == complete_process_button.text.casefold())
+async def complete_process(message: Message, state: FSMContext):
+    # TODO: отправить файл
+    keyboard = [[continue_process_button, complete_process_button]]
+    keyboard = ReplyKeyboardMarkup(keyboard=keyboard)
     await message.answer(
-        'Готово!'
+        'Готово!',
+        reply_markup=start_process_book()
     )
 
 
 async def main() -> None:
     # Initialize Bot instance with default bot properties which will be passed to all API calls
+
     # And the run events dispatching
     await dp.start_polling(bot)
 
