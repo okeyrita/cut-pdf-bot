@@ -126,7 +126,6 @@ async def process_separation_pages_file(message: Message, state: FSMContext):
         reply_markup=keyboard
     )
 
-
 @dp.message(F.text.casefold() == complete_process_button.text.casefold())
 async def complete_process(message: Message, state: FSMContext):
     # TODO: отправить файл

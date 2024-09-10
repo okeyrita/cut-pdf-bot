@@ -11,6 +11,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import InputFile, BufferedInputFile
 
 from cutter import separate_pdf_tg_bot
 
@@ -109,7 +110,15 @@ async def separate_pages_strongly(message: Message, state: FSMContext):
 @dp.message(F.document)
 async def process_file(message: Message, state: FSMContext):
     # get document
+    destination = f"doc.pdf"
+    await bot.download(
+        message.document,
+        destination=destination
+    )
     # process document
+    new = separate_pdf_tg_bot(destination)
+    result = BufferedInputFile(new.getbuffer().tobytes(), 'new.pdf')
+    await message.reply_document(result)
     await message.answer(
         'Готово!'
     )

@@ -59,13 +59,14 @@ def save_pdf(writer):
         writer.write(fp)
 
 
-def separate_pdf_tg_bot(pdf_file: io.BytesIO):
-    reader = PdfReader(pdf_file)
+def separate_pdf_tg_bot(pdf_file_location):
+    reader = PdfReader(pdf_file_location)
     writer = process_pdf(reader)
     myio = io.BytesIO()
-    with open(fileobj=myio, mode='wb') as g:
-        writer.write(g)
+    writer.write(myio)
+    myio.seek(0)
     return myio
+
 
 def main():
     reader = PdfReader('Asyncio.pdf')
