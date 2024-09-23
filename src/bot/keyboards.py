@@ -12,3 +12,6 @@ separate_horizontal_button = KeyboardButton(text="Вертикально")
 
 separate_strongly_button = KeyboardButton(text="Строго")
 separate_with_reserve_button = KeyboardButton(text="С запасом")
+
+rotate_clockwise_button = KeyboardButton(text="По часововй стрелке")
+rotate_counterclockwise_button = KeyboardButton(text="Против часовой стрелки")

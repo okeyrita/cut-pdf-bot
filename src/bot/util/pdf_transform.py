@@ -1,45 +1,8 @@
 from copy import deepcopy
-import io
-from typing import Optional, Literal
+from typing import Optional, Literal, Union
+from io import BytesIO
 
 from pypdf import PdfReader, PdfWriter, PageObject
-
-
-def crop_page_to_separate_strongly(page):
-    # horizontal
-    mb = page.mediabox
-    upper_page = deepcopy(page)
-    down_page = deepcopy(page)
-
-    upper_page.mediabox.upper_left = (0, mb.top)
-    upper_page.mediabox.upper_right = (mb.right, mb.top)
-    upper_page.mediabox.lower_left = (0, mb.top/2)
-    upper_page.mediabox.lower_right = (mb.right, mb.top/2)
-
-    down_page.mediabox.upper_left = (0, mb.top/2)
-    down_page.mediabox.upper_right = (mb.right, mb.top/2)
-    down_page.mediabox.lower_left = (0, 0)
-    down_page.mediabox.lower_right = (mb.right, 0)
-
-    return upper_page, down_page
-
-
-def crop_page_to_separate_with_reserve(page):
-    mb = page.mediabox
-    upper_page = deepcopy(page)
-    down_page = deepcopy(page)
-
-    upper_page.mediabox.upper_left = (0, mb.top)
-    upper_page.mediabox.upper_right = (mb.right, mb.top)
-    upper_page.mediabox.lower_left = (0, mb.top/2 - mb.top*0.05)
-    upper_page.mediabox.lower_right = (mb.right, mb.top/2 - mb.top*0.05)
-
-    down_page.mediabox.upper_left = (0, mb.top/2 + mb.top*0.05)
-    down_page.mediabox.upper_right = (mb.right, mb.top/2 + mb.top*0.05)
-    down_page.mediabox.lower_left = (0, 0)
-    down_page.mediabox.lower_right = (mb.right, 0)
-
-    return upper_page, down_page
 
 
 def process_pdf(reader):
@@ -47,7 +10,7 @@ def process_pdf(reader):
     pages_count = len(reader.pages)
     for page_num, page in enumerate(reader.pages):
         print(f'Processed pages: {page_num}/{pages_count}')
-        upper_page, down_page = crop_page_to_separate_with_reserve(page)
+        upper_page, down_page = separate_page_horizontally(page, 0)
         upper_page = upper_page.rotate(-90)
         down_page = down_page.rotate(-90)
         writer.add_page(upper_page)
@@ -55,7 +18,7 @@ def process_pdf(reader):
     return writer
 
 
-def separate_page_horizontally(page: PageObject, reserve: float):
+def separate_page_horizontally(page: PageObject, reserve: Union[float, int] = 0):
     mb = page.mediabox
     upper_page = deepcopy(page)
     down_page = deepcopy(page)
@@ -103,22 +66,22 @@ def save_pdf(writer: PdfWriter):
 
 
 def separate_pdf(
-    pdf_file_location: str, separate_strongly: bool,
-    separate_orientation: Literal['horizontal', 'vertical'],
-    reserve_percent: Optional[float]
+    pdf_file: BytesIO, separate_strongly: Literal['Строго', 'С запасом'],
+    separate_orientation: Literal['Горизонтально', 'Вертикально'],
+    reserve_percent: Optional[str]
 ):
-    if separate_strongly:
+    if separate_strongly == 'Строго':
         reserve = 0
     else:
-        reserve = 0.01 * reserve_percent
+        reserve = 0.01 * float(reserve_percent)
 
-    reader = PdfReader(pdf_file_location)
+    reader = PdfReader(pdf_file)
     writer = PdfWriter()
 
     pages_count = len(reader.pages)
     for page_num, page in enumerate(reader.pages):
         print(f'Processed pages: {page_num}/{pages_count}')
-        if separate_orientation == 'horizontal':
+        if separate_orientation == 'Горизонтально':
             first_page, second_page = separate_page_horizontally(page, reserve)
         else:
             first_page, second_page = separate_page_vertically(page, reserve)
@@ -126,23 +89,22 @@ def separate_pdf(
         writer.add_page(first_page)
         writer.add_page(second_page)
 
-    writer = process_pdf(reader)
-    myio = io.BytesIO()
+    myio = BytesIO()
     writer.write(myio)
     myio.seek(0)
     return myio
 
 
 def rotate_pdf(
-    pdf_file_location: str,
-    direction_of_rotation: Literal['counterclockwise', 'clockwise']
-):
-    if direction_of_rotation == 'counterclockwise':
+    pdf_file: BytesIO,
+    direction_of_rotation: Literal['По часововй стрелке', 'Против часовой стрелки']
+) -> BytesIO:
+    if direction_of_rotation == 'Против часовой стрелки':
         rotation = -90
     else:
         rotation = 90
 
-    reader = PdfReader(pdf_file_location)
+    reader = PdfReader(pdf_file)
     writer = PdfWriter()
 
     pages_count = len(reader.pages)
@@ -150,8 +112,7 @@ def rotate_pdf(
         print(f'Processed pages: {page_num}/{pages_count}')
         new_page = page.rotate(rotation)
         writer.add_page(new_page)
-    writer = process_pdf(reader)
-    myio = io.BytesIO()
+    myio = BytesIO()
     writer.write(myio)
     myio.seek(0)
     return myio
