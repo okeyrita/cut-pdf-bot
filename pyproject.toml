@@ -1,0 +1,148 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pdfbot"
+version = "1.0.0"
+description = "Telegram bot that splits, rotates, merges, compresses, OCRs and converts PDF books"
+readme = "README.md"
+requires-python = ">=3.14,<3.15"
+license = { text = "MIT" }
+authors = [{ name = "Mikhail Oliferenko" }]
+keywords = ["telegram", "bot", "pdf", "ocr", "celery", "aiogram"]
+classifiers = [
+    "Programming Language :: Python :: 3.14",
+    "Framework :: AsyncIO",
+    "Topic :: Utilities",
+]
+
+dependencies = [
+    "aiogram>=3.31,<4",
+    "pypdf>=6.16,<7",
+    "pikepdf>=10.12,<11",
+    "ocrmypdf>=17.11,<18",
+    "ebooklib>=0.20,<0.21",
+    "celery[redis]>=5.6,<6",
+    # Capped by kombu's redis extra (`redis<6.5`), NOT by us. redis-py 8.x exists but cannot
+    # coexist with Celery's Redis result backend. 6.4 has full asyncio + Streams support, which is
+    # everything we use it for. Revisit when kombu widens the pin.
+    "redis>=6.4,<6.5",
+    "pydantic>=2.13,<3",
+    "pydantic-settings>=2.15,<3",
+]
+
+[project.scripts]
+pdfbot = "pdfbot.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/mikhail-oliferenko/cut-pdf-bot"
+
+[dependency-groups]
+dev = [
+    "ruff>=0.16,<0.17",
+    "mypy>=2.3,<3",
+    "pre-commit>=4,<5",
+    "types-reportlab",
+]
+test = [
+    "pytest>=9.1,<10",
+    "pytest-asyncio>=1.4,<2",
+    "pytest-cov>=7,<8",
+    "reportlab>=5,<6",
+    "testcontainers[rabbitmq,redis]>=4.13,<5",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pdfbot"]
+
+# ---------------------------------------------------------------- ruff
+
+[tool.ruff]
+line-length = 99
+target-version = "py314"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",    # pycodestyle
+    "F",         # pyflakes
+    "I",         # isort
+    "N",         # pep8-naming
+    "UP",        # pyupgrade
+    "B",         # bugbear
+    "A",         # builtins shadowing
+    "C4",        # comprehensions
+    "SIM",       # simplify
+    "RUF",       # ruff-specific
+    "ASYNC",     # async antipatterns (blocking calls in async def)
+    "PTH",       # use pathlib
+    "TID",       # tidy imports
+    "ARG",       # unused arguments
+    "DTZ",       # naive datetimes
+]
+ignore = [
+    # Ambiguous-unicode warnings: the entire UI is Russian by design.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # "use trio.Path / anyio.Path" — we are on plain asyncio, where the fix does not exist. The
+    # only Path calls inside async functions are single stat() syscalls; genuinely blocking work
+    # goes through asyncio.to_thread. The rest of the ASYNC rules stay on to enforce that.
+    "ASYNC240",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Test doubles must mirror the signature they stand in for, and throwaway lambdas are the point.
+"tests/**" = [
+    "ARG001",   # fixtures requested for their side effect
+    "ARG002",
+    "ARG005",   # `lambda d, t: None` sinks
+    "ASYNC109", # `timeout` params exist because aiogram's BaseSession declares them
+    "RUF059",   # unused half of a tuple unpack in arrange steps
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["pdfbot"]
+lines-after-imports = 2
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+# ---------------------------------------------------------------- mypy
+
+[tool.mypy]
+python_version = "3.14"
+strict = true
+warn_unreachable = true
+plugins = ["pydantic.mypy"]
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["ebooklib.*", "testcontainers.*", "celery.*", "docker.*"]
+ignore_missing_imports = true
+
+# Celery ships no type information for its decorators, so @app.task() erases the signature of
+# everything it wraps. Relaxing the rule here rather than globally keeps strict decorator checking
+# everywhere else; the task bodies themselves are still fully type-checked.
+[[tool.mypy.overrides]]
+module = ["pdfbot.worker.*"]
+disallow_untyped_decorators = false
+
+# ---------------------------------------------------------------- pytest
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-m 'not integration' --strict-markers"
+markers = [
+    "integration: needs real RabbitMQ/Redis containers",
+]
+
+[tool.coverage.run]
+source = ["src/pdfbot"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = ["pragma: no cover", "if TYPE_CHECKING:", "raise NotImplementedError"]

@@ -1,0 +1,29 @@
+# Keep the build context small and secrets out of it.
+.git
+.github
+.venv
+venv
+.env
+*.env
+!.env.example
+
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+.coverage
+htmlcov
+*.egg-info
+dist
+build
+
+tests
+docs
+data
+*.pdf
+*.epub
+Dockerfile
+docker-compose*.yml
+# NOTE: README.md is deliberately NOT ignored -- pyproject's `readme = "README.md"` means the
+# build fails without it.
